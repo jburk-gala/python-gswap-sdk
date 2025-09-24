@@ -1,0 +1,86 @@
+"""Helpers for working with GalaChain token class keys."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Generic, Optional, Tuple, TypeVar
+
+from .errors import GSwapSDKError
+
+
+@dataclass(slots=True)
+class GalaChainTokenClassKey:
+    collection: str
+    category: str
+    type: str
+    additional_key: str
+
+    def as_tuple(self) -> Tuple[str, str, str, str]:
+        return (self.collection, self.category, self.type, self.additional_key)
+
+    def __str__(self) -> str:  # pragma: no cover - convenience
+        return stringify_token_class_key(self)
+
+
+_T = TypeVar("_T")
+
+
+@dataclass(slots=True)
+class TokenOrdering(Generic[_T]):
+    token0: GalaChainTokenClassKey
+    token1: GalaChainTokenClassKey
+    zero_for_one: bool
+    token0_attributes: Optional[_T]
+    token1_attributes: Optional[_T]
+
+
+def stringify_token_class_key(token_class_key: GalaChainTokenClassKey | str, separator: str = "|") -> str:
+    if isinstance(token_class_key, str):
+        return token_class_key
+
+    return separator.join(token_class_key.as_tuple())
+
+
+def parse_token_class_key(token_class_key: GalaChainTokenClassKey | str) -> GalaChainTokenClassKey:
+    if isinstance(token_class_key, GalaChainTokenClassKey):
+        return GalaChainTokenClassKey(*token_class_key.as_tuple())
+
+    parts = token_class_key.split("|")
+    if len(parts) != 4 or not all(parts):
+        raise GSwapSDKError(
+            "Invalid token class key",
+            "INVALID_TOKEN_CLASS_KEY",
+            {"tokenClassKey": token_class_key},
+        )
+
+    return GalaChainTokenClassKey(*parts)
+
+
+def compare_tokens(first: GalaChainTokenClassKey | str, second: GalaChainTokenClassKey | str) -> int:
+    first_key = stringify_token_class_key(first).casefold()
+    second_key = stringify_token_class_key(second).casefold()
+
+    if first_key < second_key:
+        return -1
+    if first_key > second_key:
+        return 1
+    return 0
+
+
+def get_token_ordering(
+    first: GalaChainTokenClassKey | str,
+    second: GalaChainTokenClassKey | str,
+    assert_correctness: bool,
+    token1_data: Optional[_T] = None,
+    token2_data: Optional[_T] = None,
+) -> TokenOrdering[_T]:
+    token0 = parse_token_class_key(first)
+    token1 = parse_token_class_key(second)
+    zero_for_one = stringify_token_class_key(token0) < stringify_token_class_key(token1)
+
+    if zero_for_one:
+        return TokenOrdering(token0, token1, True, token1_data, token2_data)
+
+    if assert_correctness:
+        raise GSwapSDKError.incorrect_token_ordering_error(first, second)
+
+    return TokenOrdering(token1, token0, False, token2_data, token1_data)
