@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "python-gswap-sdk"
+version = "0.1.0"
+description = "Python client for the GalaChain gSwap exchange"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{name = "GalaChain", email = "developers@galachain.com"}]
+license = {text = "MIT"}
+dependencies = [
+    "requests>=2.31",
+]
+
+[project.urls]
+Homepage = "https://github.com/GalaChain/gswap-sdk"
+Documentation = "https://github.com/GalaChain/gswap-sdk"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+packages = ["gswap_sdk"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+python_files = "test_*.py"
+pythonpath = ["."]
