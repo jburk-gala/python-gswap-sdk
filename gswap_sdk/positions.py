@@ -231,10 +231,18 @@ class Positions:
             "owner": wallet,
             "tickLower": tick_lower,
             "tickUpper": tick_upper,
-            "amount0Desired": ordering.token0_attributes[0],
-            "amount1Desired": ordering.token1_attributes[0],
-            "amount0Min": ordering.token0_attributes[1],
-            "amount1Min": ordering.token1_attributes[1],
+            "amount0Desired": _decimal_to_string(
+                validate_numeric_amount(ordering.token0_attributes[0], "amount0Desired", True)
+            ),
+            "amount1Desired": _decimal_to_string(
+                validate_numeric_amount(ordering.token1_attributes[0], "amount1Desired", True)
+            ),
+            "amount0Min": _decimal_to_string(
+                validate_numeric_amount(ordering.token0_attributes[1], "amount0Min", True)
+            ),
+            "amount1Min": _decimal_to_string(
+                validate_numeric_amount(ordering.token1_attributes[1], "amount1Min", True)
+            ),
             "positionId": position_id,
         }
 
