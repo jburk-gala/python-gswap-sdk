@@ -108,7 +108,8 @@ class Quoting:
         token_out_class = parse_token_class_key(token_out)
         ordering = get_token_ordering(token_in_class, token_out_class, False)
 
-        formatted_amount = validate_numeric_amount(amount, "amount", allow_zero=False)
+        unsigned_amount = validate_numeric_amount(amount, "amount", allow_zero=False)
+        formatted_amount = unsigned_amount if ordering.zero_for_one else -unsigned_amount
         if not is_exact_input:
             formatted_amount = -formatted_amount
 
