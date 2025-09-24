@@ -1,7 +1,7 @@
 """Token swap operations."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Dict, List, Mapping, Optional
 
@@ -62,8 +62,8 @@ class Swaps:
             raise ValueError("amount must contain either 'exactIn' or 'exactOut'")
 
         to_sign: Dict[str, object] = {
-            "token0": asdict(parse_token_class_key(ordering.token0)),
-            "token1": asdict(parse_token_class_key(ordering.token1)),
+            "token0": ordering.token0.to_payload(),
+            "token1": ordering.token1.to_payload(),
             "fee": fee,
             "amount": str(raw_amount),
             "zeroForOne": zero_for_one,

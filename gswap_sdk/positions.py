@@ -1,7 +1,7 @@
 """Liquidity position management."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Dict, List, Mapping, Optional
 
@@ -66,8 +66,8 @@ class Positions:
         token1 = parse_token_class_key(position["token1ClassKey"])
         body = {
             "owner": validate_wallet_address(owner_address),
-            "token0": asdict(token0),
-            "token1": asdict(token1),
+            "token0": token0.to_payload(),
+            "token1": token1.to_payload(),
             "fee": position["fee"],
             "tickLower": position["tickLower"],
             "tickUpper": position["tickUpper"],
@@ -102,8 +102,8 @@ class Positions:
                 "tickLower": tick_lower,
                 "tickUpper": tick_upper,
                 "amount": _decimal_to_string(validate_numeric_amount(amount, "amount")),
-                "token0": asdict(ordering.token0),
-                "token1": asdict(ordering.token1),
+                "token0": ordering.token0.to_payload(),
+                "token1": ordering.token1.to_payload(),
                 "fee": fee,
                 "owner": owner,
                 "positionId": position_id,
@@ -164,8 +164,8 @@ class Positions:
         )
 
         to_sign = {
-            "token0": asdict(ordering.token0),
-            "token1": asdict(ordering.token1),
+            "token0": ordering.token0.to_payload(),
+            "token1": ordering.token1.to_payload(),
             "fee": fee,
             "owner": wallet,
             "tickLower": tick_lower,
@@ -225,8 +225,8 @@ class Positions:
         tick_upper = max_ticks if ordering.zero_for_one else -min_ticks
 
         to_sign = {
-            "token0": asdict(ordering.token0),
-            "token1": asdict(ordering.token1),
+            "token0": ordering.token0.to_payload(),
+            "token1": ordering.token1.to_payload(),
             "fee": fee,
             "owner": wallet,
             "tickLower": tick_lower,
@@ -277,8 +277,8 @@ class Positions:
         )
 
         to_sign = {
-            "token0": asdict(ordering.token0),
-            "token1": asdict(ordering.token1),
+            "token0": ordering.token0.to_payload(),
+            "token1": ordering.token1.to_payload(),
             "fee": fee,
             "tickLower": tick_lower,
             "tickUpper": tick_upper,
@@ -323,8 +323,8 @@ class Positions:
         )
 
         to_sign = {
-            "token0": asdict(ordering.token0),
-            "token1": asdict(ordering.token1),
+            "token0": ordering.token0.to_payload(),
+            "token1": ordering.token1.to_payload(),
             "fee": fee,
             "amount0Requested": _decimal_to_string(
                 validate_numeric_amount(ordering.token0_attributes[0], "amount0Requested", True)

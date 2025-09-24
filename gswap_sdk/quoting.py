@@ -1,7 +1,6 @@
 """Quoting utilities for the gSwap SDK."""
 from __future__ import annotations
 
-from dataclasses import asdict
 from decimal import Decimal
 from typing import Any, Dict, Iterable, Optional
 
@@ -120,8 +119,8 @@ class Quoting:
         response = self._post_quote(
             "/QuoteExactAmount",
             {
-                "token0": asdict(ordering.token0),
-                "token1": asdict(ordering.token1),
+                "token0": ordering.token0.to_payload(),
+                "token1": ordering.token1.to_payload(),
                 "fee": fee,
                 "amount": str(formatted_amount),
                 "zeroForOne": zero_for_one,
