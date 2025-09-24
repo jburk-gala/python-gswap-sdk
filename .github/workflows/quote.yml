@@ -1,0 +1,98 @@
+name: gSwap Quote Reporter
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  report-quote:
+    name: Fetch and report Gala to GUSDC quote
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install gSwap SDK
+        run: |
+          python -m pip install --upgrade pip
+          pip install python-gswap-sdk
+
+      - name: Fetch quote using python-gswap-sdk
+        id: fetch_quote
+        run: |
+          python - <<'PY'
+from decimal import Decimal
+from textwrap import dedent
+import os
+import traceback
+
+from gswap_sdk import GSwap
+
+message: str
+status = "success"
+
+try:
+    client = GSwap()
+    quote = client.quoting.quote_exact_input(
+        "GALA|Unit|none|none",
+        "GUSDC|Unit|none|none",
+        Decimal("1"),
+    )
+    message = dedent(f"""
+    ### gSwap Quote Result
+    - **Input Token**: `GALA|Unit|none|none`
+    - **Output Token**: `GUSDC|Unit|none|none`
+    - **Input Amount**: {quote.in_token_amount}
+    - **Estimated Output**: {quote.out_token_amount}
+    - **Fee Tier**: {quote.fee_tier}
+    - **Price Impact**: {quote.price_impact}
+    """).strip()
+except Exception:  # pylint: disable=broad-exception-caught
+    status = "failure"
+    details = traceback.format_exc()
+    message = dedent(f"""
+    ### gSwap Quote Result
+    :x: Failed to retrieve quote for `GALA|Unit|none|none` -> `GUSDC|Unit|none|none`.
+
+    <details>
+    <summary>Error details</summary>
+
+    ```
+    {details}
+    ```
+    </details>
+    """).strip()
+
+print(message)
+
+github_output = os.environ["GITHUB_OUTPUT"]
+with open(github_output, "a", encoding="utf-8") as fh:
+    fh.write("body<<EOF\n")
+    fh.write(message)
+    fh.write("\nEOF\n")
+    fh.write(f"status={status}\n")
+
+if status == "failure":
+    # keep workflow running for comment + failure reporting
+    raise SystemExit(0)
+PY
+
+      - name: Comment quote on pull request
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          identifier: gala-gusdc-quote
+          body: ${{ steps.fetch_quote.outputs.body }}
+
+      - name: Fail when quote fetch failed
+        if: ${{ steps.fetch_quote.outputs.status == 'failure' }}
+        run: |
+          echo "Quote retrieval failed"
+          exit 1
