@@ -1,4 +1,4 @@
-"""Input validation helpers."""
+"""Validation helpers mirroring the TypeScript SDK behaviour."""
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
@@ -18,7 +18,11 @@ def _to_decimal(amount: Any) -> Decimal:
         ) from exc
 
 
-def validate_numeric_amount(amount: Any, parameter_name: str, allow_zero: bool = False) -> Decimal:
+def validate_numeric_amount(
+    amount: Any, parameter_name: str, allow_zero: bool = False
+) -> Decimal:
+    """Validate that ``amount`` is a finite positive decimal value."""
+
     value = _to_decimal(amount)
     if value.is_infinite():
         raise GSwapSDKError(
@@ -109,7 +113,7 @@ def validate_tick_range(tick_lower: int, tick_upper: int) -> None:
             },
         )
 
-    if tick_lower < -886800 or tick_upper > 886800:
+    if tick_lower < -886_800 or tick_upper > 886_800:
         raise GSwapSDKError(
             "Invalid tick range: ticks must be between -886800 and 886800",
             "VALIDATION_ERROR",
@@ -117,8 +121,8 @@ def validate_tick_range(tick_lower: int, tick_upper: int) -> None:
                 "type": "INVALID_TICK_BOUNDS",
                 "tick_lower": tick_lower,
                 "tick_upper": tick_upper,
-                "min_tick": -886800,
-                "max_tick": 886800,
+                "min_tick": -886_800,
+                "max_tick": 886_800,
             },
         )
 
@@ -148,7 +152,10 @@ def validate_wallet_address(address: Optional[str]) -> str:
             "VALIDATION_ERROR",
             {
                 "type": "MISSING_WALLET_ADDRESS",
-                "hint": "Either provide a wallet address to the function you are calling, or set one when instantiating GSwapSDK",
+                "hint": (
+                    "Either provide a wallet address to the function you are calling, "
+                    "or set one when instantiating GSwapSDK"
+                ),
             },
         )
 
@@ -161,3 +168,4 @@ def validate_wallet_address(address: Optional[str]) -> str:
         )
 
     return address
+

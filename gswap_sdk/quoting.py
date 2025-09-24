@@ -1,31 +1,16 @@
 """Quoting utilities for the gSwap SDK."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, Optional
 
 from .decimal_utils import to_decimal
 from .errors import GSwapSDKError
 from .http import HttpClient
 from .token import GalaChainTokenClassKey, get_token_ordering, parse_token_class_key
+from .types.fees import ALL_FEE_TIERS
+from .types.sdk_results import GetQuoteResult
 from .validation import validate_numeric_amount
-
-FEE_TIERS: List[int] = [50, 500, 3000]
-
-
-@dataclass(slots=True)
-class QuoteResult:
-    amount0: Decimal
-    amount1: Decimal
-    current_sqrt_price: Decimal
-    new_sqrt_price: Decimal
-    current_price: Decimal
-    new_price: Decimal
-    in_token_amount: Decimal
-    out_token_amount: Decimal
-    price_impact: Decimal
-    fee_tier: int
 
 
 class Quoting:
@@ -45,27 +30,20 @@ class Quoting:
         token_out: GalaChainTokenClassKey | str,
         amount_in: Any,
         fee: Optional[int] = None,
-    ) -> QuoteResult:
+    ) -> GetQuoteResult:
         validate_numeric_amount(amount_in, "amount_in")
         if fee is not None:
             return self._quote_single(token_in, token_out, fee, amount_in, is_exact_input=True)
 
-        quotes: List[QuoteResult] = []
-        errors: List[GSwapSDKError] = []
-        for fee_tier in FEE_TIERS:
-            try:
-                quotes.append(
-                    self._quote_single(token_in, token_out, fee_tier, amount_in, is_exact_input=True)
-                )
-            except GSwapSDKError as exc:
-                if exc.code in {"CONFLICT", "OBJECT_NOT_FOUND"}:
-                    continue
-                errors.append(exc)
-        if quotes:
-            return max(quotes, key=lambda q: q.out_token_amount)
-        if errors:
-            raise errors[0]
-        raise GSwapSDKError.no_pool_available_error(token_in, token_out)
+        return self._aggregate_quotes(
+            ALL_FEE_TIERS,
+            token_in,
+            token_out,
+            amount_in,
+            choose_best=max,
+            key=lambda quote: quote.out_token_amount,
+            is_exact_input=True,
+        )
 
     def quote_exact_output(
         self,
@@ -73,24 +51,48 @@ class Quoting:
         token_out: GalaChainTokenClassKey | str,
         amount_out: Any,
         fee: Optional[int] = None,
-    ) -> QuoteResult:
+    ) -> GetQuoteResult:
         validate_numeric_amount(amount_out, "amount_out")
         if fee is not None:
             return self._quote_single(token_in, token_out, fee, amount_out, is_exact_input=False)
 
-        quotes: List[QuoteResult] = []
-        errors: List[GSwapSDKError] = []
-        for fee_tier in FEE_TIERS:
+        return self._aggregate_quotes(
+            ALL_FEE_TIERS,
+            token_in,
+            token_out,
+            amount_out,
+            choose_best=min,
+            key=lambda quote: quote.in_token_amount,
+            is_exact_input=False,
+        )
+
+    def _aggregate_quotes(
+        self,
+        fees: Iterable[int],
+        token_in: GalaChainTokenClassKey | str,
+        token_out: GalaChainTokenClassKey | str,
+        amount: Any,
+        *,
+        choose_best,
+        key,
+        is_exact_input: bool,
+    ) -> GetQuoteResult:
+        quotes: list[GetQuoteResult] = []
+        errors: list[GSwapSDKError] = []
+        for fee_tier in fees:
             try:
                 quotes.append(
-                    self._quote_single(token_in, token_out, fee_tier, amount_out, is_exact_input=False)
+                    self._quote_single(
+                        token_in, token_out, int(fee_tier), amount, is_exact_input=is_exact_input
+                    )
                 )
             except GSwapSDKError as exc:
                 if exc.code in {"CONFLICT", "OBJECT_NOT_FOUND"}:
                     continue
                 errors.append(exc)
+
         if quotes:
-            return min(quotes, key=lambda q: q.in_token_amount)
+            return choose_best(quotes, key=key)
         if errors:
             raise errors[0]
         raise GSwapSDKError.no_pool_available_error(token_in, token_out)
@@ -103,7 +105,7 @@ class Quoting:
         amount: Any,
         *,
         is_exact_input: bool,
-    ) -> QuoteResult:
+    ) -> GetQuoteResult:
         token_in_class = parse_token_class_key(token_in)
         token_out_class = parse_token_class_key(token_out)
         ordering = get_token_ordering(token_in_class, token_out_class, False)
@@ -125,7 +127,7 @@ class Quoting:
         return self._build_quote_result(ordering.zero_for_one, fee, response)
 
     def _post_quote(self, endpoint: str, body: Dict[str, Any]) -> Dict[str, Any]:
-        payload = self._http_client.post(
+        payload = self._http_client.send_post_request(
             self._gateway_base_url,
             self._dex_contract_base_path,
             endpoint,
@@ -148,7 +150,7 @@ class Quoting:
 
     def _build_quote_result(
         self, zero_for_one: bool, fee: int, payload: Dict[str, Any]
-    ) -> QuoteResult:
+    ) -> GetQuoteResult:
         amount0 = to_decimal(payload.get("amount0"))
         amount1 = to_decimal(payload.get("amount1"))
         current_sqrt_price = to_decimal(payload.get("currentSqrtPrice"))
@@ -164,11 +166,11 @@ class Quoting:
         in_amount = amount0 if zero_for_one else amount1
         out_amount = amount1 if zero_for_one else amount0
 
-        return QuoteResult(
+        return GetQuoteResult(
             amount0=amount0,
             amount1=amount1,
-            current_sqrt_price=current_sqrt_price,
-            new_sqrt_price=new_sqrt_price,
+            current_pool_sqrt_price=current_sqrt_price,
+            new_pool_sqrt_price=new_sqrt_price,
             current_price=current_price,
             new_price=new_price,
             in_token_amount=abs(in_amount),
@@ -176,3 +178,4 @@ class Quoting:
             price_impact=(new_price - current_price) / current_price,
             fee_tier=fee,
         )
+

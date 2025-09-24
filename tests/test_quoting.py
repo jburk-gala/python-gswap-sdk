@@ -8,9 +8,12 @@ class DummyHttpClient:
         self.payload = payload
         self.calls = []
 
-    def post(self, base_url, base_path, endpoint, body):
+    def send_post_request(self, base_url, base_path, endpoint, body):
         self.calls.append((base_url, base_path, endpoint, body))
         return {"Data": self.payload}
+
+    # Backwards compatibility for older code paths
+    post = send_post_request
 
 
 def test_quote_exact_input_uses_decimal_arithmetic():

@@ -1,14 +1,16 @@
-"""Helpers for working with GalaChain token class keys."""
+"""Token utilities and type helpers for the gSwap SDK."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Generic, Optional, Tuple, TypeVar
+from typing import Generic, Optional, Tuple, TypeVar
 
 from .errors import GSwapSDKError
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class GalaChainTokenClassKey:
+    """Representation of a GalaChain token class key."""
+
     collection: str
     category: str
     type: str
@@ -17,7 +19,7 @@ class GalaChainTokenClassKey:
     def as_tuple(self) -> Tuple[str, str, str, str]:
         return (self.collection, self.category, self.type, self.additional_key)
 
-    def __str__(self) -> str:  # pragma: no cover - convenience
+    def __str__(self) -> str:  # pragma: no cover - convenience wrapper
         return stringify_token_class_key(self)
 
 
@@ -33,14 +35,22 @@ class TokenOrdering(Generic[_T]):
     token1_attributes: Optional[_T]
 
 
-def stringify_token_class_key(token_class_key: GalaChainTokenClassKey | str, separator: str = "|") -> str:
+def stringify_token_class_key(
+    token_class_key: GalaChainTokenClassKey | str, *, separator: str = "|"
+) -> str:
+    """Return the canonical string representation for a token class key."""
+
     if isinstance(token_class_key, str):
         return token_class_key
 
     return separator.join(token_class_key.as_tuple())
 
 
-def parse_token_class_key(token_class_key: GalaChainTokenClassKey | str) -> GalaChainTokenClassKey:
+def parse_token_class_key(
+    token_class_key: GalaChainTokenClassKey | str,
+) -> GalaChainTokenClassKey:
+    """Parse a token class key into :class:`GalaChainTokenClassKey`."""
+
     if isinstance(token_class_key, GalaChainTokenClassKey):
         return GalaChainTokenClassKey(*token_class_key.as_tuple())
 
@@ -52,10 +62,15 @@ def parse_token_class_key(token_class_key: GalaChainTokenClassKey | str) -> Gala
             {"tokenClassKey": token_class_key},
         )
 
-    return GalaChainTokenClassKey(*parts)
+    collection, category, type_, additional_key = parts
+    return GalaChainTokenClassKey(collection, category, type_, additional_key)
 
 
-def compare_tokens(first: GalaChainTokenClassKey | str, second: GalaChainTokenClassKey | str) -> int:
+def compare_tokens(
+    first: GalaChainTokenClassKey | str, second: GalaChainTokenClassKey | str
+) -> int:
+    """Compare two token class keys lexicographically."""
+
     first_key = stringify_token_class_key(first).casefold()
     second_key = stringify_token_class_key(second).casefold()
 
@@ -73,9 +88,18 @@ def get_token_ordering(
     token1_data: Optional[_T] = None,
     token2_data: Optional[_T] = None,
 ) -> TokenOrdering[_T]:
+    """Return the canonical ordering for a token pair.
+
+    Parameters mirror the TypeScript helper and behave identically: when
+    ``assert_correctness`` is ``True`` the function raises if ``first`` sorts
+    above ``second``.  ``token1_data`` and ``token2_data`` travel with the
+    associated tokens so the caller can keep token specific metadata aligned
+    with the ordering.
+    """
+
     token0 = parse_token_class_key(first)
     token1 = parse_token_class_key(second)
-    zero_for_one = stringify_token_class_key(token0) < stringify_token_class_key(token1)
+    zero_for_one = compare_tokens(token0, token1) < 0
 
     if zero_for_one:
         return TokenOrdering(token0, token1, True, token1_data, token2_data)
@@ -84,3 +108,4 @@ def get_token_ordering(
         raise GSwapSDKError.incorrect_token_ordering_error(first, second)
 
     return TokenOrdering(token1, token0, False, token2_data, token1_data)
+
