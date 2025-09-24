@@ -109,22 +109,24 @@ class Quoting:
         token_in_class = parse_token_class_key(token_in)
         token_out_class = parse_token_class_key(token_out)
         ordering = get_token_ordering(token_in_class, token_out_class, False)
+        zero_for_one = ordering.zero_for_one
 
         unsigned_amount = validate_numeric_amount(amount, "amount", allow_zero=False)
-        formatted_amount = unsigned_amount if ordering.zero_for_one else -unsigned_amount
+        formatted_amount = unsigned_amount if zero_for_one else -unsigned_amount
         if not is_exact_input:
             formatted_amount = -formatted_amount
 
         response = self._post_quote(
             "/QuoteExactAmount",
             {
-                "token0": str(ordering.token0),
-                "token1": str(ordering.token1),
+                "token0": ordering.token0.to_payload(),
+                "token1": ordering.token1.to_payload(),
                 "fee": fee,
                 "amount": str(formatted_amount),
+                "zeroForOne": zero_for_one,
             },
         )
-        return self._build_quote_result(ordering.zero_for_one, fee, response)
+        return self._build_quote_result(zero_for_one, fee, response)
 
     def _post_quote(self, endpoint: str, body: Dict[str, Any]) -> Dict[str, Any]:
         payload = self._http_client.send_post_request(

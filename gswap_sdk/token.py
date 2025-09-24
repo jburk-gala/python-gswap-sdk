@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, Optional, Tuple, TypeVar
+from typing import Dict, Generic, Optional, Tuple, TypeVar
 
 from .errors import GSwapSDKError
 
@@ -21,6 +21,16 @@ class GalaChainTokenClassKey:
 
     def __str__(self) -> str:  # pragma: no cover - convenience wrapper
         return stringify_token_class_key(self)
+
+    def to_payload(self) -> Dict[str, str]:
+        """Return the GalaChain API payload representation for the token."""
+
+        return {
+            "collection": self.collection,
+            "category": self.category,
+            "type": self.type,
+            "additionalKey": self.additional_key,
+        }
 
 
 _T = TypeVar("_T")
