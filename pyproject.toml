@@ -12,6 +12,7 @@ authors = [{name = "GalaChain", email = "developers@galachain.com"}]
 license = {text = "MIT"}
 dependencies = [
     "requests>=2.31",
+    "python-socketio>=5.11",
 ]
 
 [project.urls]

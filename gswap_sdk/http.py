@@ -13,7 +13,7 @@ HttpRequestor = Callable[[str, Mapping[str, Any]], requests.Response]
 
 @dataclass
 class HttpClient:
-    """Tiny wrapper around :mod:`requests` with gSwap defaults."""
+    """Small convenience wrapper around :mod:`requests` with SDK defaults."""
 
     requestor: Optional[HttpRequestor] = None
     user_agent: str = "python-gswap-sdk/0.1"
@@ -27,7 +27,7 @@ class HttpClient:
 
             self.requestor = _requestor
 
-    def _send(
+    def _send_request(
         self,
         method: str,
         base_url: str,
@@ -69,13 +69,34 @@ class HttpClient:
                     if isinstance(error, Mapping):
                         error_key = error.get("ErrorKey") or error.get("errorKey")  # type: ignore[assignment]
                         message = error.get("Message") or error.get("message")  # type: ignore[assignment]
-            raise GSwapSDKError.from_http_response(url, response.status_code, payload, error_key, message)
+            raise GSwapSDKError.from_http_response(
+                url, response.status_code, payload, error_key, message
+            )
 
         try:
             return response.json()
         except ValueError:
             return response.text
 
+    def send_post_request(
+        self,
+        base_url: str,
+        base_path: str,
+        endpoint: str,
+        body: Mapping[str, Any],
+    ) -> Any:
+        return self._send_request("POST", base_url, base_path, endpoint, body=body)
+
+    def send_get_request(
+        self,
+        base_url: str,
+        base_path: str,
+        endpoint: str,
+        params: Optional[Mapping[str, str]] = None,
+    ) -> Any:
+        return self._send_request("GET", base_url, base_path, endpoint, params=params)
+
+    # Backwards compatible aliases used by the early Python port
     def post(
         self,
         base_url: str,
@@ -83,7 +104,7 @@ class HttpClient:
         endpoint: str,
         body: Mapping[str, Any],
     ) -> Any:
-        return self._send("POST", base_url, base_path, endpoint, body=body)
+        return self.send_post_request(base_url, base_path, endpoint, body)
 
     def get(
         self,
@@ -92,4 +113,5 @@ class HttpClient:
         endpoint: str,
         params: Optional[Mapping[str, str]] = None,
     ) -> Any:
-        return self._send("GET", base_url, base_path, endpoint, params=params)
+        return self.send_get_request(base_url, base_path, endpoint, params)
+

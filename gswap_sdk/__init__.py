@@ -1,21 +1,32 @@
 """Python client for interacting with the GalaChain gSwap exchange."""
-from .assets import Asset, AssetPage, Assets
+from .assets import Assets
+from .bundler import Bundler
+from .errors import GSwapSDKError
+from .events import Events
 from .gswap import GSwap, GSwapOptions
 from .pools import PoolData, Pools
-from .quoting import Quoting, QuoteResult
+from .positions import Positions
+from .quoting import Quoting
+from .signers import GalaWalletSigner, PrivateKeySigner
+from .swaps import Swaps
 from .token import GalaChainTokenClassKey
-from .errors import GSwapSDKError
+from .types import FEE_TIER
 
 __all__ = [
-    "Asset",
-    "AssetPage",
     "Assets",
+    "Bundler",
+    "Events",
     "GSwap",
     "GSwapOptions",
     "PoolData",
     "Pools",
+    "Positions",
     "Quoting",
-    "QuoteResult",
+    "Swaps",
+    "PrivateKeySigner",
+    "GalaWalletSigner",
     "GalaChainTokenClassKey",
     "GSwapSDKError",
+    "FEE_TIER",
 ]
+

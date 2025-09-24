@@ -46,7 +46,7 @@ class Pools:
         validate_fee(fee)
         ordering = get_token_ordering(token0, token1, False)
 
-        response = self._http_client.post(
+        response = self._http_client.send_post_request(
             self._gateway_base_url,
             self._dex_contract_base_path,
             "/GetPoolData",
