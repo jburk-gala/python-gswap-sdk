@@ -29,8 +29,8 @@ jobs:
       - name: Run pytest
         run: pytest
 
-  quote:
-    name: Post gSwap quote
+  unsigned-routes:
+    name: Post unsigned route smoke test
     runs-on: ubuntu-latest
     needs: tests
     if: github.event_name == 'pull_request'
@@ -52,68 +52,55 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install .
 
-      - name: Request quote
-        id: quote
+      - name: Run unsigned route smoke tests
+        id: routes
         env:
           INPUT_TOKEN: "GALA|Unit|none|none"
           OUTPUT_TOKEN: "GUSDC|Unit|none|none"
           INPUT_AMOUNT: "1"
-        run: |
-          python <<'PY'
-          import os
-          from decimal import Decimal, ROUND_HALF_UP
-          from gswap_sdk import GSwap
+          POOL_FEE: "500"
+          WALLET_ADDRESS: "eth|5AEDA56215b167893e80B4fE645BA6d5Bab767DE"
+          ASSET_LIMIT: "5"
+          POSITION_LIMIT: "5"
+        run: python .github/scripts/run_unsigned_routes.py
 
-          input_token = os.environ["INPUT_TOKEN"]
-          output_token = os.environ["OUTPUT_TOKEN"]
-          input_amount = Decimal(os.environ["INPUT_AMOUNT"])
-
-          client = GSwap()
-          quote = client.quoting.quote_exact_input(input_token, output_token, input_amount)
-
-          def format_decimal(value: Decimal, places: int = 6) -> str:
-              quant = Decimal(1).scaleb(-places)
-              rounded = value.quantize(quant, rounding=ROUND_HALF_UP)
-              return format(rounded.normalize(), 'f')
-
-          out_amount = format_decimal(quote.out_token_amount)
-          price_impact_pct = format_decimal(quote.price_impact * Decimal(100), places=4)
-          current_price = format_decimal(quote.current_price, places=6)
-          new_price = format_decimal(quote.new_price, places=6)
-
-          output_path = os.environ["GITHUB_OUTPUT"]
-          with open(output_path, "a", encoding="utf-8") as handle:
-              handle.write(f"out_amount={out_amount}\n")
-              handle.write(f"price_impact_pct={price_impact_pct}\n")
-              handle.write(f"current_price={current_price}\n")
-              handle.write(f"new_price={new_price}\n")
-              handle.write(f"fee_tier={quote.fee_tier}\n")
-          PY
-
-      - name: Comment quote on PR
+      - name: Comment unsigned route results on PR
         uses: actions/github-script@v7
         env:
           INPUT_TOKEN: "GALA|Unit|none|none"
           OUTPUT_TOKEN: "GUSDC|Unit|none|none"
           INPUT_AMOUNT: "1"
-          OUT_AMOUNT: ${{ steps.quote.outputs.out_amount }}
-          PRICE_IMPACT: ${{ steps.quote.outputs.price_impact_pct }}
-          CURRENT_PRICE: ${{ steps.quote.outputs.current_price }}
-          NEW_PRICE: ${{ steps.quote.outputs.new_price }}
-          FEE_TIER: ${{ steps.quote.outputs.fee_tier }}
+          POOL_FEE: "500"
+          OUT_AMOUNT: ${{ steps.routes.outputs.quote_out_amount }}
+          PRICE_IMPACT: ${{ steps.routes.outputs.quote_price_impact_pct }}
+          CURRENT_PRICE: ${{ steps.routes.outputs.quote_current_price }}
+          NEW_PRICE: ${{ steps.routes.outputs.quote_new_price }}
+          FEE_TIER: ${{ steps.routes.outputs.quote_fee_tier }}
+          POOL_LIQUIDITY: ${{ steps.routes.outputs.pool_liquidity }}
+          POOL_SQRT_PRICE: ${{ steps.routes.outputs.pool_sqrt_price }}
+          POOL_SPOT_PRICE: ${{ steps.routes.outputs.pool_spot_price }}
+          POOL_TICK_SPACING: ${{ steps.routes.outputs.pool_tick_spacing }}
+          ASSET_COUNT: ${{ steps.routes.outputs.assets_count }}
+          ASSET_TOP_SYMBOL: ${{ steps.routes.outputs.assets_top_symbol }}
+          ASSET_TOP_QUANTITY: ${{ steps.routes.outputs.assets_top_quantity }}
+          POSITION_COUNT: ${{ steps.routes.outputs.positions_count }}
+          POSITION_SUMMARY: ${{ steps.routes.outputs.positions_first_summary }}
         with:
           script: |
-            const marker = '<!-- gswap-quote -->';
+            const marker = '<!-- gswap-unsigned-routes -->';
+            const assetSummary = process.env.ASSET_COUNT === '0'
+              ? '- **Wallet Assets**: No assets returned'
+              : `- **Wallet Assets**: ${process.env.ASSET_COUNT} tokens (top: ${process.env.ASSET_TOP_SYMBOL} ${process.env.ASSET_TOP_QUANTITY})`;
+            const positionSummary = process.env.POSITION_COUNT === '0'
+              ? '- **Wallet Positions**: No active positions'
+              : `- **Wallet Positions**: ${process.env.POSITION_COUNT} positions (${process.env.POSITION_SUMMARY})`;
+
             const body = `${marker}\n` +
-              '### gSwap Quote Result\n\n' +
-              `- **Input Token**: \`${process.env.INPUT_TOKEN}\`\n` +
-              `- **Output Token**: \`${process.env.OUTPUT_TOKEN}\`\n` +
-              `- **Input Amount**: ${process.env.INPUT_AMOUNT}\n` +
-              `- **Estimated Output**: ${process.env.OUT_AMOUNT} ${process.env.OUTPUT_TOKEN.split('|')[0]}\n` +
-              `- **Price Impact**: ${process.env.PRICE_IMPACT}%\n` +
-              `- **Fee Tier**: ${process.env.FEE_TIER} bps\n` +
-              `- **Current Price**: ${process.env.CURRENT_PRICE}\n` +
-              `- **New Price**: ${process.env.NEW_PRICE}\n\n` +
+              '### gSwap Unsigned Route Smoke Test\n\n' +
+              `- **Quote**: ${process.env.INPUT_AMOUNT} ${process.env.INPUT_TOKEN.split('|')[0]} → ${process.env.OUT_AMOUNT} ${process.env.OUTPUT_TOKEN.split('|')[0]} (fee ${process.env.FEE_TIER} bps, price impact ${process.env.PRICE_IMPACT}%)\n` +
+              `- **Pool**: fee ${process.env.POOL_FEE} bps, sqrt price ${process.env.POOL_SQRT_PRICE}, spot price ${process.env.POOL_SPOT_PRICE}, liquidity ${process.env.POOL_LIQUIDITY}, tick spacing ${process.env.POOL_TICK_SPACING}\n` +
+              `${assetSummary}\n` +
+              `${positionSummary}\n\n` +
               '<sub>Generated by python-gswap-sdk CI</sub>';
 
             const { data: comments } = await github.rest.issues.listComments({
