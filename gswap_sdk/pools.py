@@ -50,7 +50,11 @@ class Pools:
             self._gateway_base_url,
             self._dex_contract_base_path,
             "/GetPoolData",
-            {"token0": str(ordering.token0), "token1": str(ordering.token1), "fee": fee},
+            {
+                "token0": ordering.token0.to_payload(),
+                "token1": ordering.token1.to_payload(),
+                "fee": fee,
+            },
         )
         data = response.get("Data") if isinstance(response, dict) else None
         if not isinstance(data, dict):
