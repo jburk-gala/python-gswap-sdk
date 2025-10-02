@@ -26,4 +26,4 @@ packages = ["gswap_sdk"]
 [tool.pytest.ini_options]
 addopts = "-ra"
 python_files = "test_*.py"
-pythonpath = ["."]
+pythonpath = [".", "python-gswap-arb"]
