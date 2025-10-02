@@ -26,6 +26,31 @@
 
 3. **Explore strategy development** by importing `gswap_arb` in a Python session and building workflows that re-use the core SDK clients. Because the project depends on `python-gswap-sdk`, all signed transactions and REST helpers are immediately available.
 
+## Configuring pool universes
+
+The GalaChain gateway does not enumerate every pool automatically. Operators must supply the token class keys and fee tiers they
+care about before the arbitrage helpers can reason about routes. The new `gswap_arb.pools.PoolGraph` module accepts this seed
+configuration, validates each edge via `client.pools.get_pool_data`, and caches the resulting tick spacing and liquidity with
+freshness timestamps. Typical usage looks like:
+
+```python
+from gswap_sdk.gswap import GSwap
+from gswap_arb.pools import PoolGraph
+
+client = GSwap()
+graph = PoolGraph(client)
+graph.hydrate([
+    ("collection|category|type|GALA", "collection|category|type|ETH", 3000),
+    ("collection|category|type|ETH", "collection|category|type|USDC", 500),
+])
+
+first_hop = graph.get_neighbors("collection|category|type|GALA")
+two_hop_tokens = graph.k_hop_neighbors("collection|category|type|GALA", max_hops=2)
+```
+
+By curating this universe up front, operators avoid redundant gateway calls while still receiving refreshed liquidity data on a
+configurable cadence.
+
 ## Tooling
 
 The repository configures Black, Ruff, MyPy, and Pytest via `pyproject.toml`. These tools enforce formatting, type safety, linting, and fast feedback loops, respectively. Continuous integration stubs mirror the SDK's decimal-first philosophy by ensuring every workflow validates Decimal precision before running project checks.
