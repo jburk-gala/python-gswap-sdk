@@ -1,0 +1,60 @@
+name: python-gswap-arb CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python-gswap-arb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".."
+          pip install .[dev]
+      - name: Validate decimal context
+        run: |
+          python - <<'PY'
+          from gswap_arb import configure_decimal_context
+          configure_decimal_context()
+          PY
+      - name: Run ruff
+        run: ruff check .
+      - name: Run black
+        run: black --check .
+      - name: Run mypy
+        run: mypy .
+
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python-gswap-arb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".."
+          pip install .[dev]
+      - name: Validate decimal context
+        run: |
+          python - <<'PY'
+          from gswap_arb import configure_decimal_context
+          configure_decimal_context()
+          PY
+      - name: Run pytest
+        run: pytest
