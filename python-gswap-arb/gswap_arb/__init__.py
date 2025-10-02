@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from decimal import Clamped, Decimal, getcontext
 
-__all__ = ["configure_decimal_context"]
+from .pools import HydratedPoolEdge, PoolGraph, PoolSeed
+
+__all__ = [
+    "configure_decimal_context",
+    "HydratedPoolEdge",
+    "PoolGraph",
+    "PoolSeed",
+]
 
 
 def configure_decimal_context(precision: int = 28) -> None:
