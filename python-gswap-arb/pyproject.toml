@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "python-gswap-arb"
+version = "0.0.1"
+description = "Arbitrage automation utilities built on top of the GalaChain gSwap SDK"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{name = "GalaChain", email = "developers@galachain.com"}]
+license = {text = "MIT"}
+dependencies = [
+    "python-gswap-sdk",
+]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=24.0.0",
+    "mypy>=1.9.0",
+    "pytest>=8.1.0",
+    "ruff>=0.3.0",
+]
+
+[project.scripts]
+"gswap-arb" = "gswap_arb.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+packages = ["gswap_arb"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+select = ["E", "F", "I", "UP", "B", "N", "S1"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["gswap_arb"]
+
+[tool.mypy]
+python_version = "3.11"
+disallow_untyped_defs = true
+warn_unused_configs = true
+no_implicit_optional = true
+strict_optional = true
+warn_return_any = true
+show_error_codes = true
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.gswap]
+precision = "decimal-first"
