@@ -5,12 +5,17 @@ from __future__ import annotations
 from decimal import Clamped, Decimal, getcontext
 
 from .pools import HydratedPoolEdge, PoolGraph, PoolSeed
+from .quoting import HopFailure, HopQuote, PathQuoteResult, PathQuoteService
 
 __all__ = [
     "configure_decimal_context",
     "HydratedPoolEdge",
     "PoolGraph",
     "PoolSeed",
+    "HopFailure",
+    "HopQuote",
+    "PathQuoteResult",
+    "PathQuoteService",
 ]
 
 
