@@ -241,13 +241,18 @@ class PathQuoteService:
         if self._per_hop_timeout is None:
             return _call()
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        try:
             future = executor.submit(_call)
             try:
                 return future.result(timeout=self._per_hop_timeout)
             except concurrent.futures.TimeoutError as exc:
                 future.cancel()
-                raise TimeoutError(f"Quote request timed out after {self._per_hop_timeout} seconds") from exc
+                raise TimeoutError(
+                    f"Quote request timed out after {self._per_hop_timeout} seconds"
+                ) from exc
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
 
     @staticmethod
     def _resolve_fee_override(
