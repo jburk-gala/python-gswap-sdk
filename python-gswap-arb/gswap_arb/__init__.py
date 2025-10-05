@@ -4,6 +4,12 @@ from __future__ import annotations
 
 from decimal import Clamped, Decimal, getcontext
 
+from .opportunity import (
+    OpportunityFinder,
+    OpportunityMetricsRecorder,
+    OpportunityMonitor,
+    TradingOpportunity,
+)
 from .pools import HydratedPoolEdge, PoolGraph, PoolSeed
 from .quoting import HopFailure, HopQuote, PathQuoteResult, PathQuoteService
 
@@ -16,6 +22,10 @@ __all__ = [
     "HopQuote",
     "PathQuoteResult",
     "PathQuoteService",
+    "OpportunityFinder",
+    "OpportunityMonitor",
+    "OpportunityMetricsRecorder",
+    "TradingOpportunity",
 ]
 
 
