@@ -1,0 +1,79 @@
+name: gSwap Quote Report
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  report-quote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install python-gswap-sdk from PyPI
+        run: |
+          python -m pip install --upgrade pip
+          pip install python-gswap-sdk
+
+      - name: Fetch gSwap quote
+        id: fetch_quote
+        env:
+          INPUT_TOKEN: GALA|Unit|none|none
+          OUTPUT_TOKEN: GUSDC|Unit|none|none
+          INPUT_AMOUNT: '1'
+        run: |
+          python - <<'PY'
+          from decimal import Decimal
+          from pathlib import Path
+          import os
+
+          from gswap_sdk import GSwap
+
+          input_token = os.environ["INPUT_TOKEN"]
+          output_token = os.environ["OUTPUT_TOKEN"]
+          amount = Decimal(os.environ["INPUT_AMOUNT"])
+
+          client = GSwap()
+          quote = client.quoting.quote_exact_input(input_token, output_token, amount)
+
+          comment_body = """<!-- gswap-quote -->
+          ### gSwap Quote Result
+          - **Input token**: {input_token}
+          - **Output token**: {output_token}
+          - **Input amount**: {amount_in}
+          - **Estimated output**: {amount_out}
+          - **Fee tier**: {fee_tier}
+          - **Price impact**: {price_impact}
+          """.format(
+              input_token=input_token,
+              output_token=output_token,
+              amount_in=quote.in_token_amount,
+              amount_out=quote.out_token_amount,
+              fee_tier=quote.fee_tier,
+              price_impact=quote.price_impact,
+          ).strip()
+
+          Path("quote_comment.md").write_text(comment_body, encoding="utf-8")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write("comment<<EOF\n")
+              fh.write(comment_body)
+              fh.write("\nEOF\n")
+          PY
+
+      - name: Post quote as comment
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{ steps.fetch_quote.outputs.comment }}
+          identifier: gswap-quote
+          edit-mode: replace
